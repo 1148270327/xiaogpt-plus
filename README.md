@@ -36,31 +36,61 @@ python xiaogpt.py
 
 ## Docker 部署
 
-镜像里只有代码和依赖；配置文件和小米登录凭证放在宿主机的 `data/` 目录，重建镜像不会丢，管理页面里改的设置也会写回这里。
+在 NAS 上部署就是三步：把项目文件夹放进一个目录、准备好 `data/`、执行 `./run.sh`。镜像里只有代码和依赖。配置、小米登录凭证和收藏列表放在项目根目录的 `data/`，音乐目录另外挂进去。重建镜像不会丢这些文件。
 
-1. 把代码传到 NAS，在项目目录里准备 `data/`：
+NAS 和音箱要在同一局域网，NAS 上要先装好 Docker。
+
+1. 把整个项目文件夹拷到 NAS，例如 `/volume1/docker/xiaogpt-plus`，用 SSH 进入这个目录。`data/` 要和 `Dockerfile`、`run.sh` 放在一起：
+
+   ```text
+   xiaogpt-plus/
+   ├── Dockerfile
+   ├── run.sh
+   ├── xiaogpt.py
+   └── data/
+       ├── xiao_config.yaml
+       └── .mi.token
+   ```
+
+2. 准备 `data/`。已经在本机调好配置的话，直接拷过去：
 
    ```shell
    mkdir -p data
-   cp xiao_config.yaml.example data/xiao_config.yaml   # 或直接用本机调好的 xiao_config.yaml
-   ```
-
-   `data/xiao_config.yaml` 里 `music_http_host` 要填 NAS 的局域网 IP（如 `192.168.1.10`），容器里自动探测拿不到正确地址。`music_dir` 不用管，容器里固定是 `/music`。
-
-2. 想跳过小米新设备验证的话，把本机已登录的凭证带过去，并保持配置里的 `mi_device_id` 不变：
-
-   ```shell
+   cp xiao_config.yaml data/xiao_config.yaml
    cp ~/.mi.token data/.mi.token
    ```
 
-3. 构建镜像并启动。把 `/volume1/music` 换成 NAS 上的音乐目录：
+   `cp ~/.mi.token` 在已经登录过小米的电脑上执行，再把 `data/.mi.token` 一起拷到 NAS，这样不用重新做安全验证。配置里的 `mi_device_id` 不要改。
+
+   还没有配置文件就用示例：`cp xiao_config.yaml.example data/xiao_config.yaml`，再按上文「部署」里的项目填写。
+
+   `data/xiao_config.yaml` 里把 `music_http_host` 改成 NAS 的局域网 IP（如 `192.168.1.10`）。容器里自动探测拿不到正确地址，音箱会到错误的机器上去拉歌。`music_dir` 不用改，容器里固定是 `/music`。
+
+3. 打开 `run.sh`，把开头的 `MUSIC_DIR` 改成 NAS 上放歌的真实目录。群晖常见是 `/volume1/music`。
+
+4. 构建镜像并启动：
 
    ```shell
-   docker build -t xiaogpt-plus .
-   docker run -d --name xiaogpt --restart unless-stopped --network host \
-     -v "$PWD/data:/app/data" -v /volume1/music:/music:ro xiaogpt-plus
-   docker logs -f xiaogpt      # 看日志，Ctrl+C 只退出日志不停容器
+   chmod +x run.sh
+   ./run.sh
    ```
+
+   脚本会构建镜像 `xiaogpt-plus`，再启动名为 `xiaogpt` 的容器，并挂上两个目录：
+
+   | 宿主机 | 容器内 | 作用 |
+   | --- | --- | --- |
+   | 项目里的 `data/` | `/app/data` | 配置、小米登录凭证、收藏列表 |
+   | `run.sh` 里的 `MUSIC_DIR` | `/music`（只读） | 本地音乐 |
+
+   只挂音乐目录不够：启动参数写的是 `--config /app/data/xiao_config.yaml`，没有 `data/` 时容器会因找不到配置退出。
+
+   启动后浏览器打开 `http://NAS的IP:9530`（设了 `web_password` 才会有这个页面）。看日志：
+
+   ```shell
+   docker logs -f xiaogpt
+   ```
+
+   `Ctrl+C` 只退出日志，容器继续跑。
 
 常用命令：
 
@@ -69,12 +99,12 @@ python xiaogpt.py
 | 停止 | `docker stop xiaogpt` |
 | 启动 | `docker start xiaogpt` |
 | 重启 | `docker restart xiaogpt` |
-| 改了代码后重建 | 先 `docker rm -f xiaogpt`，再执行上面的 `docker build` 和 `docker run` |
+| 改了代码后重建 | 再执行一次 `./run.sh`（会换掉旧容器，`data/` 还在） |
 
 说明：
 
-- 用的是 host 网络，9528（音乐）和 9530（管理页面）直接开在 NAS 上，不需要端口映射；端口冲突时改配置里的 `music_http_port` / `web_port`。
-- 构建时 pip 默认用阿里云镜像，换源：`docker build --build-arg PIP_INDEX_URL=https://pypi.org/simple -t xiaogpt-plus .`。
+- 用的是 host 网络，9528（音乐）和 9530（管理页面）直接开在 NAS 上，不需要再做端口映射。端口冲突时改配置里的 `music_http_port` / `web_port`。
+- 构建时 pip 默认用阿里云镜像。换源可以改 `run.sh` 里的构建命令，加上 `--build-arg PIP_INDEX_URL=https://pypi.org/simple`。
 
 ## 管理页面
 

@@ -11,3 +11,4 @@ docs
 xiao_config.yaml
 Dockerfile
 .dockerignore
+run.sh

@@ -137,6 +137,7 @@ xiao_config.json
 config/
 *.mp3
 *.sh
+!run.sh
 nohup.out
 xiao_config.yaml
 data/
