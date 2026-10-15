@@ -36,7 +36,7 @@ python xiaogpt.py
 
 ## Docker 部署
 
-在 NAS 上部署就是三步：把项目文件夹放进一个目录、准备好 `data/`、执行 `./run.sh`。镜像里只有代码和依赖。配置、小米登录凭证和收藏列表放在项目根目录的 `data/`，音乐目录另外挂进去。重建镜像不会丢这些文件。
+在 NAS 上部署就是三步：把项目文件夹放进一个目录、准备好 `data/`、执行 `./run.sh`。镜像里只有 Python 和依赖，代码不打进镜像。启动时把整个项目目录挂到容器的 `/app`，所以 `data/` 里的配置、登录凭证和收藏跟着代码一起进去；音乐目录另外挂到 `/music`。改代码不用重新构建，重启容器即可。只有 `requirements.txt` 变了才需要重建镜像。
 
 NAS 和音箱要在同一局域网，NAS 上要先装好 Docker。
 
@@ -75,14 +75,14 @@ NAS 和音箱要在同一局域网，NAS 上要先装好 Docker。
    ./run.sh
    ```
 
-   脚本会构建镜像 `xiaogpt-plus`，再启动名为 `xiaogpt` 的容器，并挂上两个目录：
+   第一次执行会构建镜像 `xiaogpt-plus`（里面只有依赖），再启动名为 `xiaogpt` 的容器，并挂上两个目录：
 
    | 宿主机 | 容器内 | 作用 |
    | --- | --- | --- |
-   | 项目里的 `data/` | `/app/data` | 配置、小米登录凭证、收藏列表 |
+   | 项目目录 | `/app` | 代码，以及其中的 `data/`（配置、登录凭证、收藏） |
    | `run.sh` 里的 `MUSIC_DIR` | `/music`（只读） | 本地音乐 |
 
-   只挂音乐目录不够：启动参数写的是 `--config /app/data/xiao_config.yaml`，没有 `data/` 时容器会因找不到配置退出。
+   项目目录要挂进去：启动参数写的是 `python xiaogpt.py --config /app/data/xiao_config.yaml`，镜像里没有代码，也没有配置。
 
    启动后浏览器打开 `http://NAS的IP:9530`（设了 `web_password` 才会有这个页面）。看日志：
 
@@ -99,7 +99,8 @@ NAS 和音箱要在同一局域网，NAS 上要先装好 Docker。
 | 停止 | `docker stop xiaogpt` |
 | 启动 | `docker start xiaogpt` |
 | 重启 | `docker restart xiaogpt` |
-| 改了代码后重建 | 再执行一次 `./run.sh`（会换掉旧容器，`data/` 还在） |
+| 改了代码 | `docker restart xiaogpt` |
+| 改了 `requirements.txt` | `./run.sh --build` |
 
 说明：
 

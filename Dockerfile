@@ -12,7 +12,7 @@ ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 COPY requirements.txt .
 RUN pip install --no-cache-dir --only-binary=:all: -i "$PIP_INDEX_URL" -r requirements.txt
 
-COPY . .
+# 代码不打进镜像。run.sh 把项目目录挂到 /app，改代码后重启容器即可。
 
 EXPOSE 9528 9530
 ENTRYPOINT ["python", "xiaogpt.py"]
