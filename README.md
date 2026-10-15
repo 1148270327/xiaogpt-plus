@@ -32,7 +32,7 @@ python xiaogpt.py
 
 不带参数时自动读取 `xiaogpt.py` 同目录下的 `xiao_config.yaml`；要用别的配置文件就加 `--config 路径`。配置文件里的相对路径（如 `music_dir: "./music"`）按配置文件所在目录计算，从哪个目录启动都一样。
 
-音箱通过 `http://{music_http_host}:{music_http_port}/song/<id>` 从本机拉取音频，记得放行 `music_http_port`（默认 9528）。
+音箱通过 `http://{music_http_host}:{music_http_port}/song/<id>?t=<口令>` 从本机拉取音频。口令由 `music_http_token` 决定，留空则每次启动自动生成，没有口令的请求会被拒绝。记得放行 `music_http_port`（默认 9528）。
 
 ## Docker 部署
 
@@ -104,7 +104,8 @@ NAS 和音箱要在同一局域网，NAS 上要先装好 Docker。
 
 说明：
 
-- 用的是 host 网络，9528（音乐）和 9530（管理页面）直接开在 NAS 上，不需要再做端口映射。端口冲突时改配置里的 `music_http_port` / `web_port`。
+- `9528` 只绑在 `run.sh` 里的 `LAN_IP` 上，给音箱在局域网拉歌，不监听公网地址。`9530` 是管理页面。`docker ps` 里音乐端口应显示为 `局域网IP:9528->9528`，而不是 `0.0.0.0:9528`。改了配置里的端口时，`run.sh` 里的 `-p` 要一起改，然后重新执行 `./run.sh`。
+- `music_http_host` 仍填 NAS 的局域网 IP。容器自己探测到的是内网地址，音箱访问不到。
 - 构建时 pip 默认用阿里云镜像。换源可以改 `run.sh` 里的构建命令，加上 `--build-arg PIP_INDEX_URL=https://pypi.org/simple`。
 
 ## 管理页面
@@ -180,6 +181,7 @@ python list_mi_devices.py --account ${account} --password ${password}
 | favorites_path | 收藏列表文件，相对路径按配置文件目录计算（Docker 里落在 `data/`） | `favorites.json` |
 | music_http_host | 音箱访问本机用的 IP，留空自动探测（也可用环境变量 `XIAOGPT_HOSTNAME`） | |
 | music_http_port | 音乐 HTTP 端口 | `9528` |
+| music_http_token | 歌曲地址里的口令。留空则每次启动自动生成。没有口令不能下载；歌单接口仍要先登录管理页面 | |
 | xiaoai_keywords | 交给小爱处理的关键词，包含即命中（设备控制另有内置规则，不用写进来） | 打开、关闭、音量、闹钟、提醒、几点、天气等 |
 | mute_xiaoai | 接管时打断小爱自己的回答 | `true` |
 | takeover_filler | 拿到问题后立刻用小爱原声说的垫话，顶掉小爱抢说的半句；越短越好，留空不说 | `思考中` |

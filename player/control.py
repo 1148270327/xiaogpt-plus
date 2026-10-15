@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import random
+from urllib.parse import quote
 
 from miservice import MiNAService
 
@@ -25,10 +26,12 @@ class MusicPlayer:
         base_url: str,
         mina_service: MiNAService,
         device_id: str,
+        token: str,
     ) -> None:
         self.library = library
         self.base_url = base_url.rstrip("/")
         self.mina_service = mina_service
+        self.token = token
         self.device_id = device_id
         self.queue: list[Song] = []
         self.index = 0
@@ -49,7 +52,8 @@ class MusicPlayer:
         return self.queue[self.index] if self.queue else None
 
     def url_for(self, song: Song) -> str:
-        return f"{self.base_url}/song/{song.id}{song.path.suffix.lower()}"
+        suffix = song.path.suffix.lower()
+        return f"{self.base_url}/song/{song.id}{suffix}?t={quote(self.token, safe='')}"
 
     def find(self, query: str) -> list[Song]:
         """空查询返回打乱的整个曲库；否则按匹配度排序。"""
@@ -94,7 +98,7 @@ class MusicPlayer:
         if song is None:
             return
         url = self.url_for(song)
-        logger.info("播放 %s：%s", song.display, url)
+        logger.info("播放 %s", song.display)
         await self.mina_service.play_by_url(self.device_id, url, _type=1)
         self.state = "playing"
         self._played = 0.0

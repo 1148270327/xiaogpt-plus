@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import mimetypes
 import re
@@ -7,6 +8,7 @@ import socket
 import socketserver
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs
 
 from player.index import MusicLibrary
 
@@ -17,7 +19,13 @@ _RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 _CHUNK = 64 * 1024
 
 
-def _make_handler(library: MusicLibrary) -> type[BaseHTTPRequestHandler]:
+def _token_ok(got: str, expected: str) -> bool:
+    if not got or not expected:
+        return False
+    return hmac.compare_digest(got.encode(), expected.encode())
+
+
+def _make_handler(library: MusicLibrary, token: str) -> type[BaseHTTPRequestHandler]:
     class SongHandler(BaseHTTPRequestHandler):
         def do_HEAD(self) -> None:
             self._serve(send_body=False)
@@ -26,7 +34,12 @@ def _make_handler(library: MusicLibrary) -> type[BaseHTTPRequestHandler]:
             self._serve(send_body=True)
 
         def _serve(self, send_body: bool) -> None:
-            match = _SONG_PATH.match(self.path.split("?", 1)[0])
+            path, _, query = self.path.partition("?")
+            got = parse_qs(query).get("t", [""])[0]
+            if not _token_ok(got, token):
+                self.send_error(401)
+                return
+            match = _SONG_PATH.match(path)
             song = library.get(match.group(1)) if match else None
             if song is None or not song.path.is_file():
                 self.send_error(404)
@@ -87,13 +100,14 @@ class _Server(ThreadingHTTPServer):
 
 
 class MusicServer:
-    def __init__(self, library: MusicLibrary, port: int) -> None:
+    def __init__(self, library: MusicLibrary, port: int, token: str) -> None:
         self.library = library
         self.port = port
+        self.token = token
         self._httpd: ThreadingHTTPServer | None = None
 
     def start(self) -> None:
-        self._httpd = _Server(("", self.port), _make_handler(self.library))
+        self._httpd = _Server(("", self.port), _make_handler(self.library, self.token))
         self.port = self._httpd.server_address[1]
         threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
         logger.info("音乐 HTTP 服务已启动，端口 %s", self.port)

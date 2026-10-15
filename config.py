@@ -80,6 +80,7 @@ class Config:
     music_dir: str = "./music"
     music_http_host: str = ""
     music_http_port: int = 9528
+    music_http_token: str = field(default="", repr=False)
     favorites_path: str = "favorites.json"
     mute_xiaoai: bool = True
     takeover_filler: str = "思考中"

@@ -48,6 +48,14 @@ FIELDS = (
     Field("music_dir", "音乐目录", "音乐", restart=True),
     Field("music_http_host", "本机 IP", "音乐", restart=True, help="音箱能访问到的地址，留空自动探测"),
     Field("music_http_port", "音乐端口", "音乐", "int", restart=True),
+    Field(
+        "music_http_token",
+        "播放口令",
+        "音乐",
+        "secret",
+        restart=True,
+        help="放在歌曲地址里。留空则每次启动自动生成。没有口令不能下载",
+    ),
 )
 _BY_KEY = {f.key: f for f in FIELDS}
 

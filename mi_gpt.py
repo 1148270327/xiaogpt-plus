@@ -9,6 +9,7 @@ import logging
 import os
 import random
 import re
+import secrets
 import time
 from datetime import datetime
 from pathlib import Path
@@ -166,7 +167,8 @@ class MiGPT:
             self.music.bind(self.mina_service, self.device_id)
             return
         self.library.scan()
-        self.music_server = MusicServer(self.library, self.config.music_http_port)
+        token = self.config.music_http_token or secrets.token_urlsafe(18)
+        self.music_server = MusicServer(self.library, self.config.music_http_port, token)
         self.music_server.start()
         host = self.config.music_http_host or get_hostname()
         self.music = MusicPlayer(
@@ -174,6 +176,7 @@ class MiGPT:
             f"http://{host}:{self.music_server.port}",
             self.mina_service,
             self.device_id,
+            token,
         )
 
     async def login_miboy(self):

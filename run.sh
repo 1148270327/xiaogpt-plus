@@ -5,6 +5,8 @@
 
 # NAS 上放歌的目录，改成实际路径
 MUSIC_DIR="/volume1/music"
+# 音乐端口只绑在这个局域网地址上，不对外网开放
+LAN_IP="192.168.3.106"
 
 set -eu
 
@@ -37,10 +39,13 @@ fi
 
 # 项目目录挂到 /app，其中的 data/ 就是配置、登录凭证和收藏
 # 音乐目录只读挂到 /music
+# 9528 只绑局域网 IP，音箱可以拉歌，公网 IP 上没有这个端口
+# 9530 是管理页面
 docker run -d \
   --name xiaogpt \
   --restart unless-stopped \
-  --network host \
+  -p "${LAN_IP}:9528:9528" \
+  -p 9530:9530 \
   -v "$ROOT:/app" \
   -v "$MUSIC_DIR:/music:ro" \
   xiaogpt-plus
