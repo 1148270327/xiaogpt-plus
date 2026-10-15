@@ -7,8 +7,6 @@ __pycache__/
 *.so
 # user init
 ./xiao_config.yaml
-AGENT.md
-docs/
 # Distribution / packaging
 .Python
 build/
@@ -134,11 +132,14 @@ dmypy.json
 xiaogptconfig.json
 xiao_config.json
 *.json
+!.vscode/
+!.vscode/*.json
 config/
 *.mp3
 *.sh
 !run.sh
 nohup.out
 xiao_config.yaml
-data/
+data/.mi.token
+data/xiao_config.yaml
 .DS_Store

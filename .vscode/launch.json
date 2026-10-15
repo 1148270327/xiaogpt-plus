@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "xiaogpt",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/xiaogpt.py",
+      "cwd": "${workspaceFolder}",
+      "python": "/Users/lensonyuan/opt/anaconda3/envs/xiaogptpy10/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "xiaogpt（详细日志）",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/xiaogpt.py",
+      "args": ["-v"],
+      "cwd": "${workspaceFolder}",
+      "python": "/Users/lensonyuan/opt/anaconda3/envs/xiaogptpy10/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "列出小米设备",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/list_mi_devices.py",
+      "args": ["--config", "xiao_config.yaml"],
+      "cwd": "${workspaceFolder}",
+      "python": "/Users/lensonyuan/opt/anaconda3/envs/xiaogptpy10/bin/python",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
