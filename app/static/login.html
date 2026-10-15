@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xiaogpt 管理 · 登录</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+         font: 15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: #f4f5f7; color: #1f2329; }
+  form { background: #fff; padding: 32px; border-radius: 12px; width: 300px;
+         box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+  h1 { font-size: 18px; margin: 0 0 20px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px;
+          border: 1px solid #d0d3d9; border-radius: 8px; }
+  button { width: 100%; margin-top: 16px; padding: 10px; font-size: 15px; border: 0;
+           border-radius: 8px; background: #ff6900; color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .error { color: #d93026; font-size: 13px; margin-top: 10px; display: none; }
+</style>
+</head>
+<body>
+<form method="post" action="/login">
+  <h1>xiaogpt 管理页面</h1>
+  <input type="password" name="password" placeholder="管理密码" autofocus required>
+  <button type="submit">登录</button>
+  <div class="error" id="error"></div>
+</form>
+<script>
+  const params = new URLSearchParams(location.search);
+  const box = document.getElementById("error");
+  const button = document.querySelector("button");
+  const input = document.querySelector("input");
+  const show = (text) => { box.textContent = text; box.style.display = "block"; };
+  const prefix = params.has("error") ? `密码不对，今天还能再试 ${params.get("left")} 次。` : "";
+
+  if (params.has("locked")) {
+    show("今天密码输错次数太多，管理页面已停用，明天 0 点后再试。");
+    button.disabled = input.disabled = true;
+  } else if (params.has("wait")) {
+    let left = parseInt(params.get("wait"), 10);
+    button.disabled = true;
+    const tick = () => {
+      if (left <= 0) {
+        button.disabled = false;
+        show(prefix || "可以重新输入了。");
+        return;
+      }
+      show(`${prefix}请 ${left} 秒后再试。`);
+      left -= 1;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  }
+</script>
+</body>
+</html>

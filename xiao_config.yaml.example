@@ -1,0 +1,57 @@
+# 小米账号与设备（用 python list_mi_devices.py 查型号和 miotDID）
+hardware: "LX06"
+account: ""
+password: ""
+# cookie: ""          # 用 cookie 登录时可不填账号密码
+mi_did: ""
+# 登录用的固定设备号（16 位大写字母数字）：小米按它认设备，留空会自动生成并提示你写进来
+mi_device_id: ""
+# mi_token_path: "~/.mi.token"   # 登录凭证保存位置
+
+# 千问（阿里云百炼），也可用环境变量 DASHSCOPE_API_KEY
+qwen_key: ""
+qwen_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+qwen_options:
+  model: "qwen-turbo"  # 可换 qwen3.7-flash / qwen-plus / qwen-max 等
+  enable_thinking: false  # 关掉思考过程，音箱只念正文
+  # temperature: 0.8
+prompt: "你是家里的智能音箱助手，请用简洁的口语化中文回答，300 字以内，只回答文字不要带链接"
+
+# 本地音乐
+music_dir: "./music"   # NAS 上映射进来的音乐目录
+music_http_host: ""    # 音箱能访问到的本机局域网 IP，留空自动探测
+music_http_port: 9528
+favorites_path: "favorites.json"   # 收藏列表文件，相对路径按本配置文件所在目录算
+
+# 命中这些词的话交给小爱自己处理（设备控制、天气、闹钟等），不填用内置默认列表
+# xiaoai_keywords:
+#   - "开灯"
+#   - "关灯"
+#   - "空调"
+#   - "天气"
+
+mute_xiaoai: true
+takeover_filler: "思考中"   # 拿到问题后立刻用小爱原声说的垫话，顶掉小爱抢说的半句；越短越好，留空不说
+mute_window: 1.5       # 拿到问题后持续压制小爱多少秒（它一开口就暂停），还抢话就调大
+poll_interval: 0.5     # 多久查一次音箱对话记录（秒），越小打断越快
+idle_after: 180        # 多少秒没人说话就降低查询频率；有新对话立刻恢复
+idle_poll_interval: 1.5 # 闲置时多久查一次（秒），闲置后第一句会晚一点被发现
+night_start: 0         # 夜间低频时段（几点到几点，可跨午夜如 23 到 7；两个数相同表示不启用）
+night_end: 7
+night_poll_interval: 2 # 夜间多久查一次（秒）
+stream: true
+use_command: false
+verbose: false
+start_conversation: "开始持续对话"
+end_conversation: "结束持续对话"
+change_prompt_keyword:
+  - "更改提示词"
+
+# 第三方 TTS，默认用小爱原声 mi
+tts: "mi"
+# tts_options:
+#   voice: "zh-CN-XiaoxiaoNeural"
+
+# 管理页面：设置了密码才会启动，浏览器打开 http://本机IP:端口
+web_password: ""
+web_port: 9530

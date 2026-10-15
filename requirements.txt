@@ -1,0 +1,10 @@
+# 代码直接 import 的包。传递依赖由 pip 安装。
+aiohttp==3.12.15
+lingua-language-detector==2.0.2; python_version < "3.13"
+miservice-fork==2.8.2
+mutagen==1.47.0
+openai==1.99.6
+PyYAML==6.0.2
+requests==2.31.0
+rich==14.1.0
+tetos==0.4.2

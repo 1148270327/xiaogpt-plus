@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+.vscode
+__pycache__
+**/__pycache__
+*.pyc
+data
+music
+docs
+xiao_config.yaml
+Dockerfile
+.dockerignore

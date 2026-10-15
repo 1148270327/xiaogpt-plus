@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xiaogpt 管理</title>
+<style>
+  :root { --main: #ff6900; --border: #e3e5e8; --muted: #8a8f99; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f4f5f7; color: #1f2329;
+         font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between;
+           padding: 14px 24px; background: #fff; border-bottom: 1px solid var(--border); }
+  header h1 { font-size: 17px; margin: 0; }
+  main { max-width: 880px; margin: 0 auto; padding: 20px 16px 60px; }
+  section { background: #fff; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+  h2 { font-size: 15px; margin: 0 0 14px; }
+  h3 { font-size: 13px; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+  button { padding: 7px 14px; font-size: 14px; border-radius: 8px; cursor: pointer;
+           border: 1px solid var(--border); background: #fff; color: #1f2329; }
+  button.primary { background: var(--main); border-color: var(--main); color: #fff; }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=text], input[type=password], input[type=number], textarea {
+    width: 100%; padding: 7px 10px; font: inherit; border: 1px solid #d0d3d9; border-radius: 8px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .grid { display: grid; grid-template-columns: 150px 1fr; gap: 10px 14px; align-items: start; }
+  .grid label { padding-top: 7px; color: #4e5461; }
+  .help { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row input[type=text] { flex: 1; min-width: 180px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; }
+  .running { background: #e6f7ec; color: #12813b; }
+  .starting { background: #fff4e5; color: #b25e00; }
+  .error, .waiting_config { background: #fdecea; color: #c5221f; }
+  .stopped { background: #eef0f3; color: #5f6672; }
+  .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin-top: 12px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .alert { margin-top: 12px; padding: 10px 14px; border-radius: 8px; background: #fdecea; color: #a50e0e; }
+  .alert a { color: #a50e0e; font-weight: 600; word-break: break-all; }
+  .ok { color: #12813b; }
+  .devices button { margin: 6px 6px 0 0; }
+  .answer { margin-top: 10px; padding: 10px 14px; background: #f7f8fa; border-radius: 8px; white-space: pre-wrap; }
+  .songs { margin-top: 10px; max-height: 260px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .songs div { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px;
+               border-bottom: 1px solid var(--border); }
+  .songs div:last-child { border-bottom: 0; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 18px;
+           background: rgba(31,35,41,.9); color: #fff; border-radius: 8px; display: none; z-index: 9; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .grid label { padding-top: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>xiaogpt 管理</h1>
+  <form method="post" action="/logout"><button type="submit">退出</button></form>
+</header>
+<main>
+  <section>
+    <h2>运行状态 <span id="state" class="badge stopped">读取中</span></h2>
+    <div class="kv" id="status"></div>
+    <div id="status-alert"></div>
+    <div class="row" style="margin-top:14px"><button id="restart">重新连接</button></div>
+  </section>
+
+  <section>
+    <h2>小米登录与验证</h2>
+    <div class="help">用设置里的小米账号登录。新设备首次登录会要求安全验证：点开链接完成短信验证后，回来点「我已完成验证，重新登录」。登录成功后选一台音箱即可。</div>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="mi-login">登录小米</button>
+    </div>
+    <div id="mi-result"></div>
+  </section>
+
+  <section>
+    <h2>常用设置</h2>
+    <div id="settings"></div>
+    <div class="row" style="margin-top:16px">
+      <button class="primary" id="save">保存</button>
+      <span class="help">密码和 key 留空表示不修改。小米、音乐相关的改动保存后会自动重新连接。</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>测试</h2>
+    <h3>问千问（只在页面显示，不经过音箱）</h3>
+    <div class="row"><input type="text" id="chat-text" placeholder="比如：今天适合穿什么"><button id="chat">提问</button></div>
+    <div id="chat-answer"></div>
+    <h3>让音箱说一句话</h3>
+    <div class="row"><input type="text" id="say-text" placeholder="比如：你好，我是千问"><button id="say">播报</button></div>
+    <h3>本地音乐</h3>
+    <div class="row">
+      <input type="text" id="song-q" placeholder="歌名或歌手，留空列出全部"><button id="song-search">搜索</button>
+      <button id="fav-list">我的收藏</button><button id="fav-play">播放收藏</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button data-action="pause">暂停</button><button data-action="resume">继续</button>
+      <button data-action="previous">上一首</button><button data-action="next">下一首</button>
+      <button data-action="stop">停止</button><button id="fav-current" disabled>收藏当前歌曲</button>
+    </div>
+    <div id="songs"></div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STATE_TEXT = { running: "运行中", starting: "连接中", error: "出错", waiting_config: "等待配置", stopped: "已停止" };
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+function toast(text) {
+  const t = $("toast");
+  t.textContent = text;
+  t.style.display = "block";
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.style.display = "none"), 3000);
+}
+
+async function api(path, body) {
+  const options = body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  };
+  const resp = await fetch(path, options);
+  if (resp.status === 401) { location.href = "/login"; throw new Error("未登录"); }
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error || resp.statusText);
+  return data;
+}
+
+async function withButton(button, fn) {
+  button.disabled = true;
+  try { await fn(); } catch (e) { toast(e.message); } finally { button.disabled = false; }
+}
+
+function verifyAlert(error, url, retryButton) {
+  const box = el("div", { class: "alert" }, error || "");
+  if (url) {
+    box.append(el("br"), "请在浏览器打开 ",
+      el("a", { href: url, target: "_blank", rel: "noopener" }, "小米安全验证"),
+      `，完成后点下面的「${retryButton}」。`);
+  }
+  return box;
+}
+
+async function refreshStatus() {
+  try {
+    const s = await api("/api/status");
+    const badge = $("state");
+    badge.className = "badge " + s.state;
+    badge.textContent = STATE_TEXT[s.state] || s.state;
+    const rows = [
+      ["音箱", s.hardware ? `${s.hardware}  ${s.mi_did || ""}` : "未选择"],
+      ["登录设备号", s.mi_device_id || "（自动生成）"],
+      ["千问模型", s.model],
+      ["曲库", s.songs === null ? "—" : `${s.songs} 首，收藏 ${s.favorites} 首`],
+      ["正在播放", s.current ? `${s.current_favorite ? "★ " : ""}${s.current}（${s.music_state}）` : "—"],
+    ];
+    current = s.current_id ? { id: s.current_id, favorite: s.current_favorite } : null;
+    const favBtn = $("fav-current");
+    favBtn.disabled = !current;
+    favBtn.textContent = current && current.favorite ? "取消收藏当前歌曲" : "收藏当前歌曲";
+    $("status").replaceChildren(...rows.flatMap(([k, v]) => [el("div", {}, k), el("div", {}, v)]));
+    $("status-alert").replaceChildren(...(s.error ? [verifyAlert(s.error, s.notification_url, "重新连接")] : []));
+  } catch (e) { /* 下次轮询再试 */ }
+}
+
+let fields = [];
+function renderSettings(list) {
+  fields = list;
+  const container = $("settings");
+  container.replaceChildren();
+  let grid = null, group = null;
+  for (const f of list) {
+    if (f.group !== group) {
+      group = f.group;
+      container.append(el("h3", {}, group));
+      grid = el("div", { class: "grid" });
+      container.append(grid);
+    }
+    const id = "f-" + f.key;
+    let input;
+    if (f.kind === "bool") {
+      input = el("input", { type: "checkbox", id });
+      input.checked = f.value;
+    } else if (f.kind === "textarea" || f.kind === "lines") {
+      input = el("textarea", { id });
+      input.value = f.value;
+    } else {
+      const numeric = f.kind === "int" || f.kind === "float";
+      input = el("input", {
+        id, type: f.kind === "secret" ? "password" : numeric ? "number" : "text",
+        autocomplete: "off",
+      });
+      if (numeric) {
+        input.step = f.kind === "float" ? "any" : "1";
+        if (f.minimum != null) input.min = f.minimum;
+        if (f.maximum != null) input.max = f.maximum;
+      }
+      if (f.kind === "secret") input.placeholder = f.is_set ? "已设置（留空不修改）" : "未设置";
+      else input.value = f.value;
+    }
+    const cell = el("div", {}, input);
+    if (f.help) cell.append(el("div", { class: "help" }, f.help));
+    grid.append(el("label", { for: id }, f.label), cell);
+  }
+}
+
+async function loadSettings() { renderSettings(await api("/api/settings")); }
+
+$("save").onclick = (e) => withButton(e.target, async () => {
+  const data = {};
+  for (const f of fields) {
+    const input = $("f-" + f.key);
+    data[f.key] = f.kind === "bool" ? input.checked : input.value;
+  }
+  const result = await api("/api/settings", data);
+  toast(result.changed.length
+    ? `已保存：${result.changed.join("、")}${result.restarted ? "，正在重新连接" : ""}`
+    : "没有改动");
+  await loadSettings();
+  refreshStatus();
+});
+
+$("restart").onclick = (e) => withButton(e.target, async () => {
+  await api("/api/restart", {});
+  toast("正在重新连接");
+  refreshStatus();
+});
+
+$("mi-login").onclick = (e) => withButton(e.target, async () => {
+  const box = $("mi-result");
+  box.replaceChildren(el("div", { class: "help", style: "margin-top:10px" }, "登录中…"));
+  const r = await api("/api/mi/login", {});
+  if (!r.ok) {
+    box.replaceChildren(verifyAlert(r.error, r.notification_url, "我已完成验证，重新登录"));
+    e.target.textContent = r.notification_url ? "我已完成验证，重新登录" : "重新登录";
+    return;
+  }
+  e.target.textContent = "重新登录";
+  if (!r.devices.length) {
+    box.replaceChildren(el("div", { class: "alert" }, "登录成功，但这个账号下没有小爱音箱。分享来的音箱无法使用。"));
+    return;
+  }
+  const list = el("div", { class: "devices" });
+  for (const d of r.devices) {
+    list.append(el("button", {
+      onclick: (ev) => withButton(ev.target, async () => {
+        await api("/api/mi/device", { hardware: d.hardware, mi_did: d.mi_did });
+        toast(`已选择 ${d.name}，正在连接`);
+        await loadSettings();
+        refreshStatus();
+      }),
+    }, `${d.name}（${d.hardware}）`));
+  }
+  box.replaceChildren(el("div", { class: "ok", style: "margin-top:10px" }, "登录成功，选择要接管的音箱："), list);
+});
+
+$("chat").onclick = (e) => withButton(e.target, async () => {
+  $("chat-answer").replaceChildren(el("div", { class: "help" }, "思考中…"));
+  const r = await api("/api/test/chat", { text: $("chat-text").value });
+  $("chat-answer").replaceChildren(el("div", { class: "answer" }, r.answer));
+});
+
+$("say").onclick = (e) => withButton(e.target, async () => {
+  await api("/api/test/say", { text: $("say-text").value });
+  toast("已发送到音箱");
+});
+
+let current = null;
+
+async function setFavorite(id, favorite) {
+  const result = await api("/api/favorites", { id, favorite });
+  toast(result.favorite ? "已收藏" : "已移出收藏");
+  refreshStatus();
+  return result.favorite;
+}
+
+function renderSongs(songs, emptyText) {
+  const box = el("div", { class: "songs" });
+  if (!songs.length) box.append(el("div", {}, emptyText));
+  for (const s of songs) {
+    const favBtn = el("button", {}, s.favorite ? "取消收藏" : "收藏");
+    favBtn.onclick = (ev) => withButton(ev.target, async () => {
+      s.favorite = await setFavorite(s.id, !s.favorite);
+      favBtn.textContent = s.favorite ? "取消收藏" : "收藏";
+    });
+    const playBtn = el("button", {
+      onclick: (ev) => withButton(ev.target, async () => {
+        await api("/api/music/play", { id: s.id });
+        toast("开始播放：" + s.display);
+        refreshStatus();
+      }),
+    }, "播放");
+    box.append(el("div", {}, (s.favorite ? "★ " : "") + s.display, el("span", { class: "row" }, favBtn, playBtn)));
+  }
+  $("songs").replaceChildren(box);
+}
+
+$("song-search").onclick = (e) => withButton(e.target, async () => {
+  renderSongs(await api("/api/songs?q=" + encodeURIComponent($("song-q").value)), "没有找到");
+});
+
+$("fav-list").onclick = (e) => withButton(e.target, async () => {
+  renderSongs(await api("/api/songs?favorites=1"), "收藏里还没有歌");
+});
+
+$("fav-play").onclick = (e) => withButton(e.target, async () => {
+  await api("/api/music/play", { favorites: true });
+  toast("开始循环播放收藏");
+  refreshStatus();
+});
+
+$("fav-current").onclick = (e) => withButton(e.target, async () => {
+  if (current) await setFavorite(current.id, !current.favorite);
+});
+
+document.querySelectorAll("[data-action]").forEach((b) => {
+  b.onclick = () => withButton(b, async () => {
+    await api("/api/music/control", { action: b.dataset.action });
+    refreshStatus();
+  });
+});
+
+loadSettings().catch((e) => toast(e.message));
+refreshStatus();
+setInterval(refreshStatus, 3000);
+</script>
+</body>
+</html>
