@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 import logging
 import mimetypes
@@ -7,6 +9,7 @@ import re
 import socket
 import socketserver
 import threading
+from datetime import date, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 
@@ -19,13 +22,25 @@ _RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 _CHUNK = 64 * 1024
 
 
-def _token_ok(got: str, expected: str) -> bool:
-    if not got or not expected:
+def daily_token(secret: str, day: date | None = None) -> str:
+    """由固定种子和日期算出当天口令，隔天自然更换。"""
+    day = day or date.today()
+    digest = hmac.new(secret.encode(), day.isoformat().encode(), hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).decode().rstrip("=")[:22]
+
+
+def _token_ok(got: str, secret: str) -> bool:
+    if not got or not secret:
         return False
-    return hmac.compare_digest(got.encode(), expected.encode())
+    today = date.today()
+    for offset in (0, 1):  # 当天，以及跨午夜还在放的昨天
+        expected = daily_token(secret, today - timedelta(days=offset))
+        if len(got) == len(expected) and hmac.compare_digest(got.encode(), expected.encode()):
+            return True
+    return False
 
 
-def _make_handler(library: MusicLibrary, token: str) -> type[BaseHTTPRequestHandler]:
+def _make_handler(library: MusicLibrary, secret: str) -> type[BaseHTTPRequestHandler]:
     class SongHandler(BaseHTTPRequestHandler):
         def do_HEAD(self) -> None:
             self._serve(send_body=False)
@@ -36,7 +51,7 @@ def _make_handler(library: MusicLibrary, token: str) -> type[BaseHTTPRequestHand
         def _serve(self, send_body: bool) -> None:
             path, _, query = self.path.partition("?")
             got = parse_qs(query).get("t", [""])[0]
-            if not _token_ok(got, token):
+            if not _token_ok(got, secret):
                 self.send_error(401)
                 return
             match = _SONG_PATH.match(path)
@@ -100,14 +115,14 @@ class _Server(ThreadingHTTPServer):
 
 
 class MusicServer:
-    def __init__(self, library: MusicLibrary, port: int, token: str) -> None:
+    def __init__(self, library: MusicLibrary, port: int, secret: str) -> None:
         self.library = library
         self.port = port
-        self.token = token
+        self.secret = secret
         self._httpd: ThreadingHTTPServer | None = None
 
     def start(self) -> None:
-        self._httpd = _Server(("", self.port), _make_handler(self.library, self.token))
+        self._httpd = _Server(("", self.port), _make_handler(self.library, self.secret))
         self.port = self._httpd.server_address[1]
         threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
         logger.info("音乐 HTTP 服务已启动，端口 %s", self.port)

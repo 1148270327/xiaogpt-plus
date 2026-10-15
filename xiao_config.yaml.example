@@ -21,7 +21,7 @@ prompt: "你是家里的智能音箱助手，请用简洁的口语化中文回�
 music_dir: "./music"   # NAS 上映射进来的音乐目录
 music_http_host: ""    # 音箱能访问到的本机局域网 IP，留空自动探测
 music_http_port: 9528
-# music_http_token: ""   # 歌曲地址里的口令，留空则每次启动自动生成。没有口令不能下载
+# music_http_token: ""   # 口令种子。地址里的口令按日期每天换一个，留空则本次运行自动生成种子
 favorites_path: "favorites.json"   # 收藏列表文件，相对路径按本配置文件所在目录算
 
 # 命中这些词的话交给小爱自己处理（设备控制、天气、闹钟等），不填用内置默认列表

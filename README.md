@@ -32,7 +32,7 @@ python xiaogpt.py
 
 不带参数时自动读取 `xiaogpt.py` 同目录下的 `xiao_config.yaml`；要用别的配置文件就加 `--config 路径`。配置文件里的相对路径（如 `music_dir: "./music"`）按配置文件所在目录计算，从哪个目录启动都一样。
 
-音箱通过 `http://{music_http_host}:{music_http_port}/song/<id>?t=<口令>` 从本机拉取音频。口令由 `music_http_token` 决定，留空则每次启动自动生成，没有口令的请求会被拒绝。记得放行 `music_http_port`（默认 9528）。
+音箱通过 `http://{music_http_host}:{music_http_port}/song/<id>?t=<口令>` 从本机拉取音频。地址里的口令按日期每天更换，`music_http_token` 只是种子；留空则本次运行自动生成种子。没有当天口令的请求会被拒绝。跨午夜还在播放的歌，昨天的口令仍然有效。记得放行 `music_http_port`（默认 9528）。
 
 ## Docker 部署
 
@@ -181,7 +181,7 @@ python list_mi_devices.py --account ${account} --password ${password}
 | favorites_path | 收藏列表文件，相对路径按配置文件目录计算（Docker 里落在 `data/`） | `favorites.json` |
 | music_http_host | 音箱访问本机用的 IP，留空自动探测（也可用环境变量 `XIAOGPT_HOSTNAME`） | |
 | music_http_port | 音乐 HTTP 端口 | `9528` |
-| music_http_token | 歌曲地址里的口令。留空则每次启动自动生成。没有口令不能下载；歌单接口仍要先登录管理页面 | |
+| music_http_token | 口令种子，不是地址里的口令。地址里的口令按日期每天换一个。留空则本次运行自动生成种子。歌单接口仍要先登录管理页面 | |
 | xiaoai_keywords | 交给小爱处理的关键词，包含即命中（设备控制另有内置规则，不用写进来） | 打开、关闭、音量、闹钟、提醒、几点、天气等 |
 | mute_xiaoai | 接管时打断小爱自己的回答 | `true` |
 | takeover_filler | 拿到问题后立刻用小爱原声说的垫话，顶掉小爱抢说的半句；越短越好，留空不说 | `思考中` |

@@ -167,8 +167,9 @@ class MiGPT:
             self.music.bind(self.mina_service, self.device_id)
             return
         self.library.scan()
-        token = self.config.music_http_token or secrets.token_urlsafe(18)
-        self.music_server = MusicServer(self.library, self.config.music_http_port, token)
+        # 这是种子，不是地址里的口令。口令按日期从种子算出来，隔天更换。
+        secret = self.config.music_http_token or secrets.token_urlsafe(18)
+        self.music_server = MusicServer(self.library, self.config.music_http_port, secret)
         self.music_server.start()
         host = self.config.music_http_host or get_hostname()
         self.music = MusicPlayer(
@@ -176,7 +177,7 @@ class MiGPT:
             f"http://{host}:{self.music_server.port}",
             self.mina_service,
             self.device_id,
-            token,
+            secret,
         )
 
     async def login_miboy(self):

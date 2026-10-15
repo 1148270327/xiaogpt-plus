@@ -54,7 +54,7 @@ FIELDS = (
         "音乐",
         "secret",
         restart=True,
-        help="放在歌曲地址里。留空则每次启动自动生成。没有口令不能下载",
+        help="种子，不是地址里的口令。地址里的口令按日期每天换一个。留空则本次运行自动生成种子",
     ),
 )
 _BY_KEY = {f.key: f for f in FIELDS}

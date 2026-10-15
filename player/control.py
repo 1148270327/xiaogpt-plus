@@ -10,6 +10,7 @@ from miservice import MiNAService
 
 from player.index import MusicLibrary, Song
 from player.match import search
+from player.server import daily_token
 
 logger = logging.getLogger("xiaogpt.player")
 
@@ -26,12 +27,12 @@ class MusicPlayer:
         base_url: str,
         mina_service: MiNAService,
         device_id: str,
-        token: str,
+        secret: str,
     ) -> None:
         self.library = library
         self.base_url = base_url.rstrip("/")
         self.mina_service = mina_service
-        self.token = token
+        self.secret = secret
         self.device_id = device_id
         self.queue: list[Song] = []
         self.index = 0
@@ -53,7 +54,8 @@ class MusicPlayer:
 
     def url_for(self, song: Song) -> str:
         suffix = song.path.suffix.lower()
-        return f"{self.base_url}/song/{song.id}{suffix}?t={quote(self.token, safe='')}"
+        token = quote(daily_token(self.secret), safe="")
+        return f"{self.base_url}/song/{song.id}{suffix}?t={token}"
 
     def find(self, query: str) -> list[Song]:
         """空查询返回打乱的整个曲库；否则按匹配度排序。"""
@@ -98,7 +100,7 @@ class MusicPlayer:
         if song is None:
             return
         url = self.url_for(song)
-        logger.info("播放 %s", song.display)
+        logger.info("播放 %s：%s", song.display, url)
         await self.mina_service.play_by_url(self.device_id, url, _type=1)
         self.state = "playing"
         self._played = 0.0
